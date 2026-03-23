@@ -15,6 +15,7 @@
 #include <functional>
 #include <list>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -255,6 +256,9 @@ class KernelState {
   void RegisterFiber(uint32_t guest_addr, rex::thread::Fiber* fiber);
   void UnregisterFiber(uint32_t guest_addr);
 
+  /// Returns a fiber name for profiling
+  const char* GetOrCreateFiberName(uint32_t guest_addr, const char* thread_name);
+
   void RegisterNotifyListener(XNotifyListener* listener);
   void UnregisterNotifyListener(XNotifyListener* listener);
   void BroadcastNotification(XNotificationID id, uint32_t data);
@@ -317,6 +321,11 @@ class KernelState {
 
   // Protected by global_critical_region_.
   std::unordered_map<uint32_t, rex::thread::Fiber*> fiber_map_;
+
+  // Fiber name pool for profiling.
+  // Never erased, Tracy references pointers async.
+  std::mutex fiber_name_pool_mutex_;
+  std::unordered_map<uint32_t, std::unique_ptr<char[]>> fiber_name_pool_;
 
   uint32_t process_type_ = X_PROCTYPE_USER;
   object_ref<UserModule> executable_module_;

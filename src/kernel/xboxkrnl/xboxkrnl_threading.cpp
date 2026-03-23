@@ -18,6 +18,7 @@
 #include <vector>
 
 #include <rex/chrono/clock.h>
+#include <rex/dbg.h>
 #include <rex/kernel/xboxkrnl/private.h>
 #include <rex/kernel/xboxkrnl/threading.h>
 #include <rex/logging.h>
@@ -269,6 +270,7 @@ static void FiberEntryPoint(void* raw_arg) {
   // Fiber returned without switching away - switch back to the main
   // execution context as a safe fallback.
   if (current_thread && current_thread->main_fiber()) {
+    PROFILE_FIBER_LEAVE;
     rex::thread::Fiber::SwitchTo(current_thread->main_fiber());
   }
 
@@ -351,6 +353,13 @@ void KeSetCurrentStackPointers_entry(ppc_pvoid_t stack_ptr, ppc_ptr_t<X_KTHREAD>
     }
     if (!is_target_registered) {
       ks->RegisterFiber(target_guest_addr, target);
+    }
+
+    if (target == current_thread->main_fiber()) {
+      PROFILE_FIBER_LEAVE;
+    } else {
+      PROFILE_FIBER_ENTER(
+          ks->GetOrCreateFiberName(target_guest_addr, current_thread->name().c_str()));
     }
 
     rex::thread::Fiber::SwitchTo(target);

@@ -1082,4 +1082,18 @@ void KernelState::UnregisterFiber(uint32_t guest_addr) {
   fiber_map_.erase(guest_addr);
 }
 
+const char* KernelState::GetOrCreateFiberName(uint32_t guest_addr, const char* thread_name) {
+  std::lock_guard lock(fiber_name_pool_mutex_);
+  auto it = fiber_name_pool_.find(guest_addr);
+  if (it != fiber_name_pool_.end()) {
+    return it->second.get();
+  }
+  auto name = fmt::format("Fiber {:08X} ({})", guest_addr, thread_name);
+  auto buf = std::make_unique<char[]>(name.size() + 1);
+  std::memcpy(buf.get(), name.c_str(), name.size() + 1);
+  const char* ptr = buf.get();
+  fiber_name_pool_.emplace(guest_addr, std::move(buf));
+  return ptr;
+}
+
 }  // namespace rex::system
