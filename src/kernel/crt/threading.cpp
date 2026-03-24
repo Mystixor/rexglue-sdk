@@ -261,6 +261,7 @@ void DeleteFiber_entry(ppc_pvoid_t lpFiber) {
   // Self-delete: ConvertFiberToThread + ExitThread
   if (static_cast<uint32_t>(kthread->fiber_ptr) == fiber_addr) {
     REXKRNL_DEBUG("DeleteFiber: self-delete fiber={:#010x}", fiber_addr);
+    PROFILE_FIBER_LEAVE;
     ConvertFiberToThread_impl(thread);
     thread->Exit(1);  // does not return
     return;
